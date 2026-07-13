@@ -20,6 +20,7 @@ const store = useTunnelProfileStore();
 const draft = ref<TunnelProfile[]>([]);
 const selectedId = ref<string | null>(null);
 const isSaving = ref(false);
+const hasInitializedDraft = ref(false);
 
 function cloneProfiles(profiles: TunnelProfile[]): TunnelProfile[] {
   return JSON.parse(JSON.stringify(profiles)) as TunnelProfile[];
@@ -38,7 +39,12 @@ void store.init();
 watch(
   () => store.isLoaded,
   (loaded) => {
-    if (loaded && !isDirty.value) resetDraft();
+    // A remounted settings panel starts with an empty draft even when Pinia
+    // already contains profiles, so the initial empty state is not a user edit.
+    if (loaded && (!hasInitializedDraft.value || !isDirty.value)) {
+      resetDraft();
+      hasInitializedDraft.value = true;
+    }
   },
   { immediate: true },
 );
