@@ -116,15 +116,20 @@ jobs:
 
           const lockPath = "pnpm-lock.yaml";
           let lockfile = fs.readFileSync(lockPath, "utf8");
-          for (const dependency of Object.keys(mcpPackage.optionalDependencies ?? {})) {
+          const updateLockDependency = (dependency, packageDirectory) => {
             const escapedDependency = dependency.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            const specifierPattern = new RegExp(`('${escapedDependency}':\\n\\s+specifier: )[^\\n]+`);
-            lockfile = lockfile.replace(specifierPattern, `$1${version}`);
+            const dependencyPattern = new RegExp(`('${escapedDependency}':\\n\\s+specifier: )[^\\n]+(\\n\\s+version: )([^\\n]+)`);
+            const updated = lockfile.replace(dependencyPattern, `$1${version}$2link:../${packageDirectory}`);
+            if (updated === lockfile) {
+              throw new Error(`Unable to update ${dependency} in pnpm-lock.yaml.`);
+            }
+            lockfile = updated;
+          };
+          for (const dependency of Object.keys(mcpPackage.optionalDependencies ?? {})) {
+            updateLockDependency(dependency, dependency.replace("@dbx-app/", ""));
           }
           for (const dependency of Object.keys(cliPackage.optionalDependencies ?? {})) {
-            const escapedDependency = dependency.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            const specifierPattern = new RegExp(`('${escapedDependency}':\\n\\s+specifier: )[^\\n]+`);
-            lockfile = lockfile.replace(specifierPattern, `$1${version}`);
+            updateLockDependency(dependency, dependency.replace("@dbx-app/", ""));
           }
           fs.writeFileSync(lockPath, lockfile);
 
@@ -152,6 +157,9 @@ jobs:
 
       - name: Update Rust lockfile
         run: cargo check -p dbx-mcp -p dbx-cli --no-default-features
+
+      - name: Verify workspace lockfile
+        run: pnpm install --frozen-lockfile --lockfile-only --ignore-scripts
 
       - name: Run package tests
         run: pnpm test:packages
