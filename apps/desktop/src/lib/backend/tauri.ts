@@ -2204,6 +2204,7 @@ export interface SqlFilePreview {
   sizeBytes: number;
   preview: string;
   canExecuteWithoutSelectedDatabase: boolean;
+  establishesDatabaseContext?: boolean;
 }
 
 export interface SqlFileProgress {
@@ -2224,6 +2225,10 @@ export async function previewSqlFile(filePath: string): Promise<SqlFilePreview> 
 
 export async function executeSqlFile(request: SqlFileRequest): Promise<void> {
   return invoke("execute_sql_file", { request });
+}
+
+export async function executeSqlFiles(request: SqlFileRequest, filePaths: string[]): Promise<void> {
+  return invoke("execute_sql_files", { request, filePaths });
 }
 
 export async function cancelSqlFileExecution(executionId: string): Promise<boolean> {
@@ -2467,6 +2472,7 @@ export interface DatabaseExportRequest {
   includeStructure: boolean;
   includeData: boolean;
   includeObjects: boolean;
+  includeCreateDatabase?: boolean;
   dropTableIfExists?: boolean;
   omitAutoIncrement?: boolean;
   failOnError?: boolean;
